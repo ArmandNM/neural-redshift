@@ -40,8 +40,8 @@ class TestInitialization:
     def test_init_bias_zeros(self):
         model = NeuralNetwork(num_layers=3, dimensions=[1, 10, 1], activation=nn.ReLU)
         initialize_weights(model, bias_mode="zero")
-        assert model.linear_stack[0].weight.any()
-        assert not model.linear_stack[0].bias.any()
+        assert model.linear_stack[0].weight.detach().any()
+        assert not model.linear_stack[0].bias.detach().any()
 
     def test_invalid_weight_mode(self):
         with pytest.raises(AssertionError):

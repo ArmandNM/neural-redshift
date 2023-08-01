@@ -2,8 +2,19 @@ from torch import nn
 
 from typing import List
 
+from inductive_biases.models.activations import SinActivation, GaussianActivation
 
-SUPPORTED_ACTIVATIONS = [nn.ReLU, nn.GELU, nn.Sigmoid, nn.Tanh]
+
+SUPPORTED_ACTIVATIONS = [
+    nn.ReLU,
+    nn.GELU,
+    nn.Sigmoid,
+    nn.Tanh,
+    nn.SiLU,
+    nn.SELU,
+    SinActivation,
+    GaussianActivation,
+]
 
 
 class NeuralNetwork(nn.Module):
@@ -58,7 +69,6 @@ def initialize_weights(
     # Initialize weights and biases for all linear layers
     for module in model.modules():
         if isinstance(module, nn.Linear):
-            module.weight.data.normal_
             init_fn(module.weight)
             if module.bias is not None:
                 bias_init(module.bias)
