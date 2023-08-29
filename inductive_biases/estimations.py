@@ -25,11 +25,10 @@ class OutputSpaceEstimator:
         device = next(model.parameters()).device
 
         outputs = []
-        with torch.no_grad():
-            for data in dataloader:
-                data = data.to(device)
-                outputs.append(model(data).detach())
+        for data in dataloader:
+            data = data.to(device)
+            outputs.append(model(data))
 
         outputs = torch.cat(outputs)
-        outputs = outputs.detach().reshape(self.grid_x.shape).cpu().numpy()
+        outputs = outputs.reshape(self.grid_x.shape)
         return outputs
