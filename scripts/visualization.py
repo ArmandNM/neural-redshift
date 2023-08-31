@@ -7,7 +7,7 @@ from torch import nn
 
 from inductive_biases.models.neural_networks import NeuralNetwork, initialize_weights
 from inductive_biases.models.activations import SinActivation, GaussianActivation
-from inductive_biases.estimations import OutputSpaceEstimator
+from inductive_biases.estimations import LinearDecisionSpaceEstimator
 from inductive_biases.spectral_analysis import get_mean_frequency_2d
 
 MIN_AMPLITUDE = 0.10
@@ -128,7 +128,7 @@ def analyze_output_space(activation: str = "relu"):
     else:
         raise ValueError(f"AMPLITUDE_SPACING must be 'linear' or 'log'.")
 
-    estimator = OutputSpaceEstimator(x1=X1, y1=Y1, x2=X2, y2=Y2, steps=POINTS_PER_AXIS)
+    estimator = LinearDecisionSpaceEstimator(start=(X1, Y1), end=(X2, Y2), steps=POINTS_PER_AXIS)
 
     output_spaces = {}
     spectral_spaces = {}
