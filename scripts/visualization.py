@@ -106,7 +106,7 @@ def draw_spectra(spectral_spaces: dict, x_labels: list, y_labels: list, name: st
                 cmap="hot",
                 interpolation="none",
                 origin="upper",
-                norm=matplotlib.colors.LogNorm()
+                norm=matplotlib.colors.LogNorm(),
             )
 
             axs[i, j].set_yticklabels([])
@@ -147,7 +147,11 @@ def analyze_output_space(activation: str = "relu"):
 
             # Initialize random weights
             initialize_weights(
-                model, weight_mode="uniform", bias_mode="uniform", amplitude=amplitude
+                model,
+                weight_mode="uniform",
+                bias_mode="uniform",
+                W_amplitude=amplitude,
+                b_amplitude=amplitude,
             )
 
             # Estimate output space
