@@ -1,6 +1,6 @@
 import argparse
-import textwrap
 import torch
+import math
 from torch import nn
 
 from transformers import GPT2TokenizerFast, GPT2LMHeadModel
@@ -57,6 +57,17 @@ def prune_layers(model, num_layers):
     model.transformer.h = nn.ModuleList(model.transformer.h[:num_layers])
 
 
+def replace_positional_encodings(model):
+    max_len, embed_dim = model.transformer.wpe.weight.shape
+    position = torch.arange(max_len).unsqueeze(1)
+    div_term = torch.exp(torch.arange(0, embed_dim, 2) * (-math.log(10000.0) / embed_dim))
+    model.transformer.wpe.weight.data *= 0  # torch.zeros_like(model.transformer.wpe.weight)
+    model.transformer.wpe.weight.data[:, 0::2] = torch.sin(position * div_term)
+    model.transformer.wpe.weight.data[:, 1::2] = torch.cos(position * div_term)
+    # Scale down positional embeddings as they are much larger than token embeddings
+    model.transformer.wpe.weight.data /= 33.33
+
+
 def main():
     parser = argparse.ArgumentParser(description="Transformers complexity analysis")
     parser.add_argument("--model_name", type=str, required=False, default="gpt2")
@@ -65,17 +76,19 @@ def main():
     parser.add_argument("--batch_size", type=int, default=256)
     parser.add_argument("--max_new_tokens", type=int, default=50)
     parser.add_argument("--top_k", type=int, required=False, default=50)
-    parser.add_argument("--layernorm_gamma", type=float, default=0.1)
+    parser.add_argument("--layernorm_gamma", type=float, default=1.0)
 
-    parser.add_argument("--num_layers", type=int, required=False, default=5)
+    parser.add_argument("--num_layers", type=int, required=False, default=12)
 
     parser.add_argument("--do_sample", action="store_true")
     parser.add_argument("--disable_layernorm", action="store_true")
     parser.add_argument("--modulate_layernorm", action="store_true")
+    parser.add_argument("--use_positional_encodings", action="store_true")
 
     args = parser.parse_args()
 
     # args.modulate_layernorm = True
+    # args.use_positional_encodings = True
 
     # Instantiate tokenizer
     tokenizer = GPT2TokenizerFast.from_pretrained(args.model_name)
@@ -95,12 +108,15 @@ def main():
     # initialize_weights(model.transformer.h, W_amplitude=args.amplitude, b_amplitude=args.amplitude)
     # initialize_weights(model.lm_head, weight_mode="normal", W_amplitude=0.02, bias_mode="zero")
 
+    # Use trigonometric encodings instead of learned positional embeddings
+    if args.use_positional_encodings:
+        replace_positional_encodings(model)
+
     # Fix number of layers
     prune_layers(model, args.num_layers)
 
     # Replace or modulate layers
     replace_layers(model.transformer.h, args)
-
 
     model.to(device)
     model.eval()
