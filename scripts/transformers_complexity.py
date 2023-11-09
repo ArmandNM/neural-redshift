@@ -4,7 +4,6 @@ import torch
 from torch import nn
 
 from transformers import GPT2TokenizerFast, GPT2LMHeadModel
-from lempel_ziv_complexity import lempel_ziv_complexity
 
 from tqdm import tqdm
 
@@ -43,7 +42,7 @@ def replace_layers(model, args):
             return module
 
     def _recursive_setattr(obj, attr, value):
-        attr = attr.split('.', 1)
+        attr = attr.split(".", 1)
         if len(attr) == 1:
             setattr(obj, attr[0], value)
         else:
@@ -54,16 +53,21 @@ def replace_layers(model, args):
             _recursive_setattr(model, name, _replace_layer(module))
 
 
+def prune_layers(model, num_layers):
+    model.transformer.h = nn.ModuleList(model.transformer.h[:num_layers])
+
+
 def main():
-    parser = argparse.ArgumentParser(
-        description="Transformers complexity analysis")
+    parser = argparse.ArgumentParser(description="Transformers complexity analysis")
     parser.add_argument("--model_name", type=str, required=False, default="gpt2")
-    parser.add_argument("--activation", type=str, required=False, default="relu")
+    parser.add_argument("--activation", type=str, required=False, default="tanh")
     parser.add_argument("--amplitude", type=float, required=False, default=0.02)
     parser.add_argument("--batch_size", type=int, default=256)
     parser.add_argument("--max_new_tokens", type=int, default=50)
     parser.add_argument("--top_k", type=int, required=False, default=50)
     parser.add_argument("--layernorm_gamma", type=float, default=0.1)
+
+    parser.add_argument("--num_layers", type=int, required=False, default=5)
 
     parser.add_argument("--do_sample", action="store_true")
     parser.add_argument("--disable_layernorm", action="store_true")
@@ -76,22 +80,27 @@ def main():
     # Instantiate tokenizer
     tokenizer = GPT2TokenizerFast.from_pretrained(args.model_name)
     tokenizer.padding_side = "left"
-    tokenizer.pad_token = tokenizer.eos_token # to avoid an error
+    tokenizer.pad_token = tokenizer.eos_token  # to avoid an error
 
     # Instantiate model for causal language modeling
-    model = GPT2LMHeadModel.from_pretrained(args.model_name,
-                                            output_scores=True,
-                                            pad_token_id=tokenizer.eos_token_id,
-                                            activation_function="relu"
-                                            )
+    model = GPT2LMHeadModel.from_pretrained(
+        args.model_name,
+        output_scores=True,
+        pad_token_id=tokenizer.eos_token_id,
+        activation_function="relu",
+    )
 
     # Initialize weights
     model.apply(model._init_weights)
     # initialize_weights(model.transformer.h, W_amplitude=args.amplitude, b_amplitude=args.amplitude)
     # initialize_weights(model.lm_head, weight_mode="normal", W_amplitude=0.02, bias_mode="zero")
 
+    # Fix number of layers
+    prune_layers(model, args.num_layers)
+
     # Replace or modulate layers
     replace_layers(model.transformer.h, args)
+
 
     model.to(device)
     model.eval()
@@ -105,11 +114,12 @@ def main():
     generated_ids = []
     with torch.no_grad():
         for data in tqdm(dataloader):
-            outputs = model.generate(data.to(device),
-                                     max_new_tokens=args.max_new_tokens,
-                                     do_sample=args.do_sample,
-                                     top_k=args.top_k,
-                                    )
+            outputs = model.generate(
+                data.to(device),
+                max_new_tokens=args.max_new_tokens,
+                do_sample=args.do_sample,
+                top_k=args.top_k,
+            )
             generated_ids.append(outputs.to("cpu"))
             del outputs
             torch.cuda.empty_cache()
