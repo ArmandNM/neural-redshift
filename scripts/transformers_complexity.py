@@ -1,6 +1,11 @@
 import argparse
 import torch
 import math
+import json
+import random
+import numpy as np
+import os
+
 from torch import nn
 
 from transformers import GPT2TokenizerFast, GPT2LMHeadModel
@@ -68,6 +73,39 @@ def replace_positional_encodings(model):
     model.transformer.wpe.weight.data /= 33.33
 
 
+def set_random_seed(random_seed):
+    random.seed(random_seed)
+    np.random.seed(random_seed)
+    torch.manual_seed(random_seed)
+    torch.cuda.manual_seed(random_seed)
+    torch.cuda.manual_seed_all(random_seed)
+    torch.backends.cudnn.benchmark = False
+    torch.backends.cudnn.deterministic = True
+    os.environ["CUBLAS_WORKSPACE_CONFIG"] = ":4096:8"  # to suppress warning
+    # torch.use_deterministic_algorithms(True, warn_only=True)
+    torch.use_deterministic_algorithms(True)
+
+
+def write_results(args, complexities):
+    exp_name = ""
+    exp_name += f"{args.model_name}__"
+    exp_name += f"{args.activation}__"
+    exp_name += f"gamma_{args.layernorm_gamma}__"
+    exp_name += f"layers_{args.num_layers}__"
+    if args.use_positional_encodings:
+        exp_name += "trig_enc__"
+    exp_name += f"{args.seed}"
+
+    results = {}
+    results.update(vars(args))
+    results["mean"] = complexities.mean().item()
+    results["std"] = complexities.std().item()
+    results["complexities"] = complexities.tolist()
+
+    with open(f"{args.output_path}/{exp_name}.json", "w") as f:
+        json.dump(results, f, indent=4)
+
+
 def main():
     parser = argparse.ArgumentParser(description="Transformers complexity analysis")
     parser.add_argument("--model_name", type=str, required=False, default="gpt2")
@@ -77,8 +115,9 @@ def main():
     parser.add_argument("--max_new_tokens", type=int, default=50)
     parser.add_argument("--top_k", type=int, required=False, default=50)
     parser.add_argument("--layernorm_gamma", type=float, default=1.0)
-
     parser.add_argument("--num_layers", type=int, required=False, default=12)
+    parser.add_argument("--seed", type=int, required=False, default=42)
+    parser.add_argument("--output_path", type=str, required=False, default="./results")
 
     parser.add_argument("--do_sample", action="store_true")
     parser.add_argument("--disable_layernorm", action="store_true")
@@ -88,7 +127,9 @@ def main():
     args = parser.parse_args()
 
     # args.modulate_layernorm = True
-    # args.use_positional_encodings = True
+    # args.use_positional_encodings = False
+
+    set_random_seed(args.seed)
 
     # Instantiate tokenizer
     tokenizer = GPT2TokenizerFast.from_pretrained(args.model_name)
@@ -150,8 +191,7 @@ def main():
         complexities.append(lempel_ziv_complexity(gids) / len(gids))
 
     complexities = torch.tensor(complexities).float()
-    print(f"mean: {complexities.mean()}")
-    print(f"std: {complexities.std()}")
+    write_results(args, complexities)
 
 
 if __name__ == "__main__":
