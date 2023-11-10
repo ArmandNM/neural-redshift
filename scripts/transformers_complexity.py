@@ -106,29 +106,8 @@ def write_results(args, complexities):
         json.dump(results, f, indent=4)
 
 
-def main():
-    parser = argparse.ArgumentParser(description="Transformers complexity analysis")
-    parser.add_argument("--model_name", type=str, required=False, default="gpt2")
-    parser.add_argument("--activation", type=str, required=False, default="tanh")
-    parser.add_argument("--amplitude", type=float, required=False, default=0.02)
-    parser.add_argument("--batch_size", type=int, default=256)
-    parser.add_argument("--max_new_tokens", type=int, default=50)
-    parser.add_argument("--top_k", type=int, required=False, default=50)
-    parser.add_argument("--layernorm_gamma", type=float, default=1.0)
-    parser.add_argument("--num_layers", type=int, required=False, default=12)
-    parser.add_argument("--seed", type=int, required=False, default=42)
-    parser.add_argument("--max_inferences", type=int, default=1000)
-    parser.add_argument("--output_path", type=str, required=False, default="./results")
-
-    parser.add_argument("--do_sample", action="store_true")
-    parser.add_argument("--disable_layernorm", action="store_true")
-    parser.add_argument("--modulate_layernorm", action="store_true")
-    parser.add_argument("--use_positional_encodings", action="store_true")
-
-    args = parser.parse_args()
-
-    # args.modulate_layernorm = True
-    # args.use_positional_encodings = False
+def compute_complexity(args):
+    print(args)
 
     set_random_seed(args.seed)
 
@@ -196,6 +175,32 @@ def main():
     complexities = torch.tensor(complexities).float()
     write_results(args, complexities)
 
+
+def main():
+    parser = argparse.ArgumentParser(description="Transformers complexity analysis")
+    parser.add_argument("--model_name", type=str, required=False, default="gpt2")
+    parser.add_argument("--activation", type=str, required=False, default="tanh")
+    parser.add_argument("--amplitude", type=float, required=False, default=0.02)
+    parser.add_argument("--batch_size", type=int, default=256)
+    parser.add_argument("--max_new_tokens", type=int, default=50)
+    parser.add_argument("--top_k", type=int, required=False, default=50)
+    parser.add_argument("--layernorm_gamma", type=float, default=1.0)
+    parser.add_argument("--num_layers", type=int, required=False, default=12)
+    parser.add_argument("--seed", type=int, required=False, default=42)
+    parser.add_argument("--max_inferences", type=int, default=1000)
+    parser.add_argument("--output_path", type=str, required=False, default="./results")
+
+    parser.add_argument("--do_sample", action="store_true")
+    parser.add_argument("--disable_layernorm", action="store_true")
+    parser.add_argument("--modulate_layernorm", action="store_true")
+    parser.add_argument("--use_positional_encodings", action="store_true")
+
+    args = parser.parse_args()
+
+    args.modulate_layernorm = True
+    # args.use_positional_encodings = False
+
+    compute_complexity(args)
 
 if __name__ == "__main__":
     main()

@@ -1,9 +1,9 @@
-import subprocess
-import sys
+import argparse
 
 from torch import nn
 
 from inductive_biases.models.activations import SinActivation, GaussianActivation
+from transformers_complexity import compute_complexity
 
 
 SUPPORTED_ACTIVATIONS = {
@@ -18,62 +18,55 @@ SUPPORTED_ACTIVATIONS = {
 }
 
 GAMMA = [0.1, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0, 10, 50, 100, 1000]
-AMPLITUDE = 0.02
-BATCH_SIZE = 256
-MAX_NEW_TOKENS = 50
-DO_SAMPLE = False
-TOP_K = 50
-MIN_LAYERS = 6
+MIN_LAYERS = 1
 MAX_LAYERS = 12
-MAX_SEEDS = 3
+MAX_SEEDS = 10
 
 DISABLE_LAYERNORM = False
 MODULATE_LAYERNORM = True
+USE_POSITIONAL_ENCODINGS = False
 
 MODEL_NAME = "gpt2"
 
 def main():
-    # Specify which activations to run as command line arguments
-    if len(sys.argv) > 1:
-        SELECTED_ACTIVATIONS = []
-        for arg in sys.argv:
-            if arg in SUPPORTED_ACTIVATIONS.keys():
-                SELECTED_ACTIVATIONS.append(arg)
-    else:
-        # Run with all activations if not arguments are specified
-        SELECTED_ACTIVATIONS = list(SUPPORTED_ACTIVATIONS.keys())
+    parser = argparse.ArgumentParser(description="Transformers complexity analysis")
+    parser.add_argument("--model_name", type=str, required=False, default="gpt2")
+    parser.add_argument("--activation", type=str, required=False, default="tanh")
+    parser.add_argument("--amplitude", type=float, required=False, default=0.02)
+    parser.add_argument("--batch_size", type=int, default=256)
+    parser.add_argument("--max_new_tokens", type=int, default=50)
+    parser.add_argument("--top_k", type=int, required=False, default=50)
+    parser.add_argument("--layernorm_gamma", type=float, default=1.0)
+    parser.add_argument("--num_layers", type=int, required=False, default=12)
+    parser.add_argument("--seed", type=int, required=False, default=42)
+    parser.add_argument("--max_inferences", type=int, default=1000)
+    parser.add_argument("--output_path", type=str, required=False, default="./results")
 
-    print(f"Running with activations: {SELECTED_ACTIVATIONS}")
+    parser.add_argument("--do_sample", action="store_true")
+    parser.add_argument("--disable_layernorm", action="store_true")
+    parser.add_argument("--modulate_layernorm", action="store_true")
+    parser.add_argument("--use_positional_encodings", action="store_true")
 
-    # results = {}
+    args = parser.parse_args()
+
+    args.disable_layernorm = DISABLE_LAYERNORM
+    args.modulate_layernorm = MODULATE_LAYERNORM
+    args.use_positional_encodings = USE_POSITIONAL_ENCODINGS
+
+    SELECTED_ACTIVATIONS = [args.activation]
+
     for activation in SELECTED_ACTIVATIONS:
-        # results[activation] = {}
         for num_layers in range(MIN_LAYERS, MAX_LAYERS + 1):
             for gamma in GAMMA:
-                # results[activation][gamma] = []
                 for seed in range(MAX_SEEDS):
                     print(f"Running activation: {activation} num_layers: {num_layers} gamma: {gamma} seed: {seed}")
-                    # outputs = subprocess.check_output(["python", "scripts/transformers_complexity.py"])
-                    outputs = subprocess.check_output(["python", "scripts/transformers_complexity.py",
-                                    "--model_name", MODEL_NAME,
-                                    "--activation", activation,
-                                    "--amplitude", f"{AMPLITUDE}",
-                                    "--batch_size", f"{BATCH_SIZE}",
-                                    "--max_new_tokens", f"{MAX_NEW_TOKENS}",
-                                    "--top_k", f"{TOP_K}",
-                                    "--layernorm_gamma", f"{gamma}",
-                                    "--num_layers", f"{num_layers}",
-                                    "--seed", f"{seed}",
-                                    "--modulate_layernorm"
-                                    ]
-                                )
-                    # print(outputs)
-                    # mean, std = outputs.decode("UTF-8").split("\n")[0:2]
-                    # mean = float(mean.split(": ")[1])
-                    # std = float(std.split(": ")[1])
-                    # results[activation][gamma].append((mean, std))
 
-    # print(results)
+                    args.activation = activation
+                    args.num_layers = num_layers
+                    args.layernorm_gamma = gamma
+
+                    compute_complexity(args)
+
     print("Done")
 
 
