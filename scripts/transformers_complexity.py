@@ -117,6 +117,7 @@ def main():
     parser.add_argument("--layernorm_gamma", type=float, default=1.0)
     parser.add_argument("--num_layers", type=int, required=False, default=12)
     parser.add_argument("--seed", type=int, required=False, default=42)
+    parser.add_argument("--max_inferences", type=int, default=1000)
     parser.add_argument("--output_path", type=str, required=False, default="./results")
 
     parser.add_argument("--do_sample", action="store_true")
@@ -165,7 +166,9 @@ def main():
     prompts = []
     prompts = torch.tensor([[i] for i in range(len(tokenizer.vocab))]).long()
 
-    dataloader = torch.utils.data.DataLoader(prompts[:1000], batch_size=args.batch_size)
+    dataloader = torch.utils.data.DataLoader(
+        prompts[: args.max_inferences], batch_size=args.batch_size
+    )
     outputs = []
 
     generated_ids = []
