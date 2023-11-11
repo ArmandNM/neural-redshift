@@ -92,7 +92,7 @@ def write_results(args, complexities):
     exp_name = ""
     exp_name += f"{args.model_name}__"
     exp_name += f"{args.activation}__"
-    exp_name += f"gamma_{args.layernorm_gamma}__"
+    exp_name += f"gamma_{args.layernorm_gamma:.2f}__"
     exp_name += f"layers_{args.num_layers}__"
     if args.use_positional_encodings:
         exp_name += "trig_enc__"
@@ -106,7 +106,7 @@ def write_results(args, complexities):
     print(results["mean"])
     print(results["std"])
 
-    with open(f"{args.output_path}/{exp_name}.json", "w") as f:
+    with open(os.path.join(args.output_path, f"{exp_name}.json"), "w") as f:
         json.dump(results, f, indent=4)
 
 

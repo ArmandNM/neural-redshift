@@ -1,4 +1,5 @@
 import argparse
+import numpy as np
 
 from torch import nn
 
@@ -17,10 +18,10 @@ SUPPORTED_ACTIVATIONS = {
     "gaussian": GaussianActivation,
 }
 
-GAMMA = [0.1, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0, 10, 50, 100, 1000]
-MIN_LAYERS = 1
-MAX_LAYERS = 12
-MAX_SEEDS = 10
+# GAMMA = [0.1, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0, 10, 50, 100, 1000]
+GAMMAS = np.logspace(-1, 3, 25).tolist()
+LAYERS = [1, 3, 6, 9, 12]
+SEEDS = [1, 2, 3, 4, 5]
 
 DISABLE_LAYERNORM = False
 MODULATE_LAYERNORM = True
@@ -55,15 +56,19 @@ def main():
 
     SELECTED_ACTIVATIONS = [args.activation]
 
+    num_experiments = len(LAYERS) * len(GAMMAS) * len(SEEDS) * len(SELECTED_ACTIVATIONS)
+    print(f"Found {num_experiments} to run.")
+
     for activation in SELECTED_ACTIVATIONS:
-        for num_layers in range(MIN_LAYERS, MAX_LAYERS + 1):
-            for gamma in GAMMA:
-                for seed in range(MAX_SEEDS):
+        for num_layers in LAYERS:
+            for gamma in GAMMAS:
+                for seed in SEEDS:
                     print(f"Running activation: {activation} num_layers: {num_layers} gamma: {gamma} seed: {seed}")
 
                     args.activation = activation
                     args.num_layers = num_layers
                     args.layernorm_gamma = gamma
+                    args.seed = seed
 
                     compute_complexity(args)
 
