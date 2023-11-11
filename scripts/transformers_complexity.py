@@ -30,6 +30,10 @@ SUPPORTED_ACTIVATIONS = {
     "gaussian": GaussianActivation,
 }
 
+def replace_activations(model, activation):
+    for block in model:
+        block.mlp.act = SUPPORTED_ACTIVATIONS[activation]()
+
 
 def replace_layers(model, args):
     def _replace_layer(module):
@@ -41,8 +45,6 @@ def replace_layers(model, args):
                 module.bias.data = torch.zeros_like(module.bias.data)
                 return module
             return module
-        elif isinstance(module, torch.nn.ReLU):
-            return SUPPORTED_ACTIVATIONS[args.activation]()
         else:
             return module
 
@@ -101,6 +103,8 @@ def write_results(args, complexities):
     results["mean"] = complexities.mean().item()
     results["std"] = complexities.std().item()
     results["complexities"] = complexities.tolist()
+    print(results["mean"])
+    print(results["std"])
 
     with open(f"{args.output_path}/{exp_name}.json", "w") as f:
         json.dump(results, f, indent=4)
@@ -135,6 +139,9 @@ def compute_complexity(args):
 
     # Fix number of layers
     prune_layers(model, args.num_layers)
+
+    # Replace activations
+    replace_activations(model.transformer.h, args.activation)
 
     # Replace or modulate layers
     replace_layers(model.transformer.h, args)
