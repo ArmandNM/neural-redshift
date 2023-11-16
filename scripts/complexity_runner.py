@@ -19,7 +19,8 @@ SUPPORTED_ACTIVATIONS = {
 }
 
 # GAMMA = [0.1, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0, 10, 50, 100, 1000]
-GAMMAS = np.logspace(-1, 3, 25).tolist()
+# GAMMAS = np.logspace(-1, 3, 25).tolist()
+GAMMAS = np.logspace(-1, 1, 25).tolist()
 LAYERS = [1, 3, 6, 9, 12]
 SEEDS = [1, 2, 3, 4, 5]
 

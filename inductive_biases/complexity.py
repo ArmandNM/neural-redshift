@@ -1,5 +1,8 @@
+import numpy as np
+
+
 def lempel_ziv_complexity(sequence):
-    r""" Manual implementation of the Lempel-Ziv complexity.
+    r"""Manual implementation of the Lempel-Ziv complexity.
 
     It is defined as the number of different substrings encountered as the stream is viewed from begining to the end.
     As an example:
@@ -44,5 +47,32 @@ def lempel_ziv_complexity(sequence):
     return len(sub_strings)
 
 
+def lzw_complexity(sequence: list):
+    unique_values = list(set(sequence))
+
+    # if len(unique_values) == 1:
+    #     return 1  # * np.log2(len(sequence))
+
+    dictionary = dict()
+    for i, v in enumerate(unique_values):
+        dictionary[(v,)] = i
+
+    s = 0
+    subsequence = (sequence[s],)
+    for e in range(1, len(sequence)):
+        print(s, e)
+        subsequence += (sequence[e],)
+        if subsequence not in dictionary:
+            dictionary[subsequence] = len(dictionary)
+            s = e
+            subsequence = (sequence[s],)
+
+    complexity = len(dictionary)
+    return complexity
+
+
 if __name__ == "__main__":
     print(lempel_ziv_complexity([1, 2, 3, 1, 2, 4, 5, 1, 2, 3, 4, 5]))
+    print(lzw_complexity([1, 2, 3, 1, 2, 4, 5, 1, 2, 3, 4, 5]))
+    print(lzw_complexity([5,] * 1024))
+    print(lzw_complexity(list("abcabcasdabcd")))

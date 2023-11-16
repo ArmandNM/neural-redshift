@@ -14,7 +14,7 @@ from tqdm import tqdm
 
 from inductive_biases.models.neural_networks import initialize_weights
 from inductive_biases.models.activations import SinActivation, GaussianActivation
-from inductive_biases.complexity import lempel_ziv_complexity
+from inductive_biases.complexity import lempel_ziv_complexity, lzw_complexity
 
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -88,7 +88,7 @@ def set_random_seed(random_seed):
     torch.use_deterministic_algorithms(True)
 
 
-def write_results(args, complexities):
+def write_results(args, lz_complexities, lzw_complexities):
     exp_name = ""
     exp_name += f"{args.model_name}__"
     exp_name += f"{args.activation}__"
@@ -100,11 +100,17 @@ def write_results(args, complexities):
 
     results = {}
     results.update(vars(args))
-    results["mean"] = complexities.mean().item()
-    results["std"] = complexities.std().item()
-    results["complexities"] = complexities.tolist()
-    print(results["mean"])
-    print(results["std"])
+    results["lz_mean"] = lz_complexities.mean().item()
+    results["lz_std"] = lz_complexities.std().item()
+    results["lz_complexities"] = lz_complexities.tolist()
+    print(f"LZ mean: {results['lz_mean']}")
+    print(f"LZ std: {results['lz_std']}")
+
+    results["lzw_mean"] = lzw_complexities.mean().item()
+    results["lzw_std"] = lzw_complexities.std().item()
+    results["lzw_complexities"] = lzw_complexities.tolist()
+    print(f"LZW mean: {results['lzw_mean']}")
+    print(f"LZW std: {results['lzw_std']}")
 
     with open(os.path.join(args.output_path, f"{exp_name}.json"), "w") as f:
         json.dump(results, f, indent=4)
@@ -173,14 +179,17 @@ def compute_complexity(args):
     generated_ids = torch.cat(generated_ids, dim=0)
     generated_texts = tokenizer.batch_decode(generated_ids, skip_special_tokens=True)
 
-    complexities = []
+    lz_complexities = []
+    lzw_complexities = []
 
     for gids in generated_ids:
         gids = gids.tolist()
-        complexities.append(lempel_ziv_complexity(gids) / len(gids))
+        lz_complexities.append(lempel_ziv_complexity(gids) / len(gids))
+        lzw_complexities.append(lzw_complexity(gids))
 
-    complexities = torch.tensor(complexities).float()
-    write_results(args, complexities)
+    lz_complexities = torch.tensor(lz_complexities).float()
+    lzw_complexities = torch.tensor(lzw_complexities).float()
+    write_results(args, lz_complexities, lzw_complexities)
 
 
 def main():
